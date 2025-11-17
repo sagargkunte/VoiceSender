@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Audio Recorder</title>
+</head>
+<body>
+
+    <h2>🎤 Record & Upload Audio</h2>
+
+    <button id="startBtn">Start Recording</button>
+    <button id="stopBtn" disabled>Stop Recording</button>
+
+    <p id="status"></p>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+
+        const startBtn = document.getElementById("startBtn");
+        const stopBtn = document.getElementById("stopBtn");
+        const status = document.getElementById("status");
+
+        startBtn.addEventListener("click", async () => {
+            // Ask microphone permission
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+            mediaRecorder = new MediaRecorder(stream);
+
+            audioChunks = [];
+            mediaRecorder.start();
+
+            status.textContent = "🎙 Recording...";
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+
+            mediaRecorder.ondataavailable = e => {
+                audioChunks.push(e.data);
+            };
+        });
+
+        stopBtn.addEventListener("click", () => {
+            mediaRecorder.stop();
+
+            status.textContent = "⏳ Processing...";
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+
+            mediaRecorder.onstop = async () => {
+                // Convert recording to Blob
+                const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+
+                // Prepare file for backend
+                const formData = new FormData();
+                formData.append("audio", audioBlob, "recording.webm");
+
+                // Upload
+                const result = await fetch("http://IPv4_adress_under_LAN_WiFi/upload-audio", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const res = await result.json();
+                status.textContent = "✅ Uploaded: " + res.message;
+            };
+        });
+    </script>
+
+</body>
+</html>
